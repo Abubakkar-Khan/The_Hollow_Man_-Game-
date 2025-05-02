@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Character Follow</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: black; }
+    canvas { display: block; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.js"></script>
+</head>
+<body>
+<script>
+let spriteSheet;
+let cols = 4;
+let rows = 4;
+let frameW, frameH;
+let animationFrames = [];
+let posX, posY;
+let targetX, targetY;
+let direction = 0;
+let animIndex = 0;
+let animSpeed = 5;
+let scaleFactor = 0.10; // Scale character to 50% size
+let moveSpeed = 5; // Constant speed in pixels per frame
+
+function preload() {
+  console.log("Attempting to load char.png");
+  spriteSheet = loadImage("char.png", () => {
+    console.log("Sprite sheet loaded successfully");
+  }, () => {
+    console.error("Failed to load char.png. Check file format, path, or server.");
+  });
+}
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  if (!spriteSheet || !spriteSheet.width || !spriteSheet.height) {
+    console.error("Sprite sheet not loaded or invalid. Using placeholder.");
+    posX = width / 2;
+    posY = height / 2;
+    targetX = posX;
+    targetY = posY;
+    return;
+  }
+  if (spriteSheet.width % cols !== 0 || spriteSheet.height % rows !== 0) {
+    console.error("Sprite sheet dimensions not divisible by 4x4 grid.");
+  }
+  frameW = spriteSheet.width / cols;
+  frameH = spriteSheet.height / rows;
+
+  for (let row = 0; row < rows; row++) {
+    let rowFrames = [];
+    for (let col = 0; col < cols; col++) {
+      let frame = spriteSheet.get(col * frameW, row * frameH, frameW, frameH);
+      rowFrames.push(frame);
+    }
+    animationFrames.push(rowFrames);
+  }
+
+  posX = width / 2;
+  posY = height / 2;
+  targetX = posX;
+  targetY = posY;
+}
+
+function draw() {
+  background(0);
+  if (!spriteSheet) {
+    fill(255, 0, 0); // Red square if image fails
+    rect(posX - 25, posY - 25, 50, 50);
+    textAlign(LEFT, TOP);
+    fill(255);
+    text("Sprite sheet failed to load", 10, 20);
+    let dx = targetX - posX;
+    let dy = targetY - posY;
+    let distToTarget = dist(posX, posY, targetX, targetY);
+    if (distToTarget > 2) {
+      let speed = moveSpeed;
+      posX += (dx / distToTarget) * speed;
+      posY += (dy / distToTarget) * speed;
+    }
+    return;
+  }
+
+  let dx = targetX - posX;
+  let dy = targetY - posY;
+  let distToTarget = dist(posX, posY, targetX, targetY);
+
+  if (distToTarget > 2) {
+    posX += (dx / distToTarget) * moveSpeed;
+    posY += (dy / distToTarget) * moveSpeed;
+
+    // Direction logic: Adjusted to fix opposite running
+    // Assumes sprite sheet rows: 0=down, 1=left, 2=right, 3=up
+    // Swap 1 and 2 if left/right are still reversed
+    if (abs(dx) > abs(dy)) {
+      direction = dx > 0 ? 1 : 2; // Left if dx > 0, Right if dx < 0
+    } else {
+      direction = dy > 0 ? 0 : 3; // Down or Up
+    }
+
+    // Update animation only when moving
+    if (frameCount % animSpeed === 0) {
+      animIndex = (animIndex + 1) % cols;
+    }
+  } else {
+    // Idle: Show first frame of down animation (front-facing)
+    direction = 0;
+    animIndex = 0;
+  }
+
+  let currentFrame = animationFrames[direction][animIndex];
+  image(currentFrame, posX - (frameW * scaleFactor) / 2, posY - (frameH * scaleFactor) / 2, frameW * scaleFactor, frameH * scaleFactor);
+}
+
+function mouseMoved() {
+  targetX = mouseX;
+  targetY = mouseY;
+}
+</script>
+</body>
+</html>
